@@ -1,95 +1,153 @@
-import Image from 'next/image'
-import styles from './page.module.css'
+"use client"
+import { useReducer } from 'react'
+import DigitButton from './components/DigitButton'
+import OperationButton from './components/OperationButton'
 
+export const ACTIONS = {
+  ADD_DIGIT: 'add-digit',
+  CHOOSE_OP: 'choose-op',
+  CLEAR: 'clear',
+  DELETE_DIGIT: 'delete-digit',
+  EVALUATE: 'evaluate'
+}
+
+function reducer(state, {type, payload}) {
+  switch(type) {
+    case ACTIONS.ADD_DIGIT:
+      if(state.overwrite) {
+        return {
+          ...state,
+        currentOperand: payload.digit,
+        overwrite: false
+        }
+
+      }
+      if(payload.digit === '0' && state.currentOperand === '0') return state;
+      if(payload.digit === '.' && state.currentOperand.includes(".")) return state;
+      return {
+        ...state,
+        currentOperand: `${state.currentOperand || ""}${payload.digit}`
+      }
+    case ACTIONS.CHOOSE_OP:
+      if(state.currentOperand == null && state.previousOperand == null) return state;
+      
+      if(state.currentOperand == null) {
+        return {
+          ...state,
+          operation: payload.operation,
+
+        }
+      }
+
+      if (state.previousOperand == null) {
+        return {
+          ...state, 
+          operation: payload.operation,
+          previousOperand: state.currentOperand,
+          currentOperand: null,
+        }
+      }
+
+      return {
+        ...state,
+        previousOperand: evalute(state),
+        operation: payload.operation,
+        currentOperand: null
+      }
+    case ACTIONS.CLEAR:
+      return {}
+    case ACTIONS.DELETE_DIGIT:
+      if(state.overwrite) {
+        return {
+          ...state,
+          overwrite: false,
+          currentOperand:null
+        }
+      } 
+      if(state.currentOperand == null) return state
+      if(state.currentOperand.length === 1) {
+        return { ...state, currentOperand: null }
+      } 
+      return {
+        ...state,
+        currentOperand: state.currentOperand.slice(0, -1)
+      }
+    case ACTIONS.EVALUATE:
+      if(state.operation == null || state.currentOperand == null || state.previousOperand == null) return state 
+      return {
+        ...state,
+        overwrite: true,
+        previousOperand: null,
+        operation: null,
+        currentOperand: evalute(state)
+      }
+  }
+}
+
+function evalute({currentOperand, previousOperand, operation}) {
+  const prev = parseFloat(previousOperand)
+  const curr = parseFloat(currentOperand)
+  if(isNaN(prev) || isNaN(curr)) return ""
+  let computatin = ""
+  switch(operation) {
+    case '+':
+      computatin = prev + curr
+      break
+    case '-':
+      computatin = prev - curr
+      break
+    case '*':
+      computatin = prev * curr
+      break
+    case '/':
+      computatin = prev / curr
+      break
+  }
+  return computatin.toString()
+}
+
+const ENTEGER_FORMATTER = new Intl.NumberFormat("en-us", {
+  maximumFractionDigits:0
+});
+
+function formatOperand (operand) {
+  if(operand == null) return
+  const [integer, decimal] = operand.split('.')
+  if(decimal == null) return ENTEGER_FORMATTER.format(integer)
+  return `${ENTEGER_FORMATTER.format(integer)}.${decimal}`
+}
 export default function Home() {
+
+  const [{currentOperand, previousOperand, operation}, dispatch] = useReducer(reducer, {})
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
+    <div className='calculator-grig'>
+      <div className='output'>
+        <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        <div className='previous-op'>{formatOperand(previousOperand)} {operation}</div>
+        <div className='current-op'>{formatOperand(currentOperand)}</div>
       </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+      <button className='span-two' onClick={() => dispatch({type: ACTIONS.CLEAR})}>AC</button>
+      <button onClick={() => dispatch({type: ACTIONS.DELETE_DIGIT})}>DEL</button>
+      <OperationButton operation="/" dispatch={dispatch}/>
+      <DigitButton digit="1" dispatch={dispatch}/>
+      <DigitButton digit="2" dispatch={dispatch}/>
+      <DigitButton digit="3" dispatch={dispatch}/>
+      <OperationButton operation="*" dispatch={dispatch}/>
+      <DigitButton digit="4" dispatch={dispatch}/>
+      <DigitButton digit="5" dispatch={dispatch}/>
+      <DigitButton digit="6" dispatch={dispatch}/>
+      <OperationButton operation="+" dispatch={dispatch}/>
+      <DigitButton digit="7" dispatch={dispatch}/>
+      <DigitButton digit="8" dispatch={dispatch}/>
+      <DigitButton digit="9" dispatch={dispatch}/>
+      <OperationButton operation="-" dispatch={dispatch}/>
+      <DigitButton digit="." dispatch={dispatch}/>
+      <DigitButton digit="0" dispatch={dispatch}/>
+      <button className='span-two' onClick={() => dispatch({type: ACTIONS.EVALUATE})}>=</button>
+    </div>
   )
 }
